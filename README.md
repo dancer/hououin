@@ -47,14 +47,24 @@
   not a permission. riot can change the endpoints or their mind at
   any time, and both would break this.
 
-> anything inaccurate?
+> how exact is this?
 
-  prices outside today's store are worked out from content tier,
-  because riot removed the offers endpoint. they are labelled as
-  estimates, and bundle exclusives like champions skins read low.
+  today's four offers carry the price riot charges you, read
+  straight from the storefront.
 
-  skin art comes from valorant-api.com at 512px, the largest riot
-  publishes. nothing is ever drawn above its native size.
+  everywhere else the number is riot's list price for that skin's
+  content tier: select 875, deluxe 1275, premium 1775, exclusive
+  2175, ultra 2475, doubled for melee. riot deleted the endpoint
+  that priced the whole catalogue, and every path it lived at now
+  answers resource_not_found while wallet and entitlements still
+  work, so it is gone rather than moved. tier pricing is the rule
+  riot prices by, so it is right for anything the shop sells.
+  items only ever sold inside a bundle never had a price of their
+  own, so theirs is notional.
+
+  skin art is riot's own render at 512px. that is the largest they
+  publish, there is no larger variant, and nothing here is ever
+  drawn above it.
 
 > links?
 

@@ -97,7 +97,7 @@ export const Vault = () => {
     ctx.font = `400 17px ${face}`;
     ctx.letterSpacing = "5px";
     ctx.fillText(
-      `${handle.toUpperCase()}   ${skins.length} SKINS   PRICES ESTIMATED`.trim(),
+      `${handle.toUpperCase()}   ${skins.length} SKINS   TIER PRICES`.trim(),
       PAD,
       110
     );
@@ -207,7 +207,7 @@ export const Vault = () => {
     <div className="grid w-full min-w-0 gap-[clamp(20px,3vh,32px)]">
       <div className="border-rule flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3 border-b pb-[14px]">
         <span className="cap text-ink-3">
-          {state.handle} · {state.skins.length} skins · prices estimated
+          {state.handle} · {state.skins.length} skins · tier prices
         </span>
         <button
           className="cap border-rule-2 hover:bg-ink hover:text-paper cursor-pointer border px-[16px] py-[9px] transition-colors duration-300 hover:border-transparent disabled:opacity-40"
