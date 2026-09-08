@@ -22,6 +22,7 @@ interface Feed {
 type State =
   | { status: "loading" }
   | { status: "off" }
+  | { status: "expired" }
   | ({ status: "on" } & Feed);
 
 export interface Seat {
@@ -64,23 +65,40 @@ export const AccountProvider = ({
   const [seats, setSeats] = useState<Seat[]>(initial);
   const [active, setActive] = useState(seeded);
   const [open, setOpen] = useState(false);
+  const turn = useRef(0);
 
   const load = useCallback(async () => {
-    const [feedRes, seatRes] = await Promise.all([
-      fetch("/api/store"),
-      fetch("/api/accounts"),
-    ]);
-    if (seatRes.ok) {
-      const body = await seatRes.json();
-      setSeats(body.accounts);
-      setActive(body.active ?? "");
+    turn.current += 1;
+    const ticket = turn.current;
+    const settle = (next: State) => {
+      if (ticket === turn.current) {
+        setState(next);
+      }
+    };
+
+    try {
+      const [feedRes, seatRes] = await Promise.all([
+        fetch("/api/store"),
+        fetch("/api/accounts"),
+      ]);
+
+      let known = 0;
+      if (seatRes.ok && ticket === turn.current) {
+        const body = await seatRes.json();
+        known = body.accounts.length;
+        setSeats(body.accounts);
+        setActive(body.active ?? "");
+      }
+
+      if (feedRes.ok) {
+        const feed: Feed = await feedRes.json();
+        settle({ status: "on", ...feed });
+        return;
+      }
+      settle({ status: known > 0 ? "expired" : "off" });
+    } catch {
+      settle({ status: "expired" });
     }
-    if (!feedRes.ok) {
-      setState({ status: "off" });
-      return;
-    }
-    const feed: Feed = await feedRes.json();
-    setState({ status: "on", ...feed });
   }, []);
 
   useEffect(() => {
