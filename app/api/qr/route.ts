@@ -54,7 +54,10 @@ export const GET = async () => {
 
   const result = await poll(JSON.parse(raw) as Pending, COUNTRY);
   if (result.status !== "done") {
-    return NextResponse.json({ status: result.status });
+    return NextResponse.json({
+      stage: "stage" in result ? result.stage : undefined,
+      status: result.status,
+    });
   }
 
   const response = NextResponse.json({ status: "done" });

@@ -7,7 +7,7 @@ const DISCOVERY = "https://auth.riotgames.com/.well-known/openid-configuration";
 const LOGIN = "https://authenticate.riotgames.com/api/v1/login";
 const REDEEM = "https://auth.riotgames.com/api/v1/login-token";
 const AUTHORIZE = "https://auth.riotgames.com/api/v1/authorization";
-const QR = "https://qrlogin.riotgames.com/riotmobile";
+const QR = "https://qrlogin.riotgames.com/riotmobile/";
 const CLIENT =
   "RiotGamesApi/24.9.1.4445 rso-auth (Windows;10;;Professional, x64) riot_client/0";
 const AUTHENTICATOR =
@@ -86,7 +86,10 @@ export const poll = async (pending: Pending, country: string) => {
   const body = await check.json();
   const token = body?.success?.login_token;
   if (!token) {
-    return { status: "waiting" as const };
+    return {
+      stage: String(body?.type ?? "unknown"),
+      status: "waiting" as const,
+    };
   }
 
   const swap = await fetch(REDEEM, {
