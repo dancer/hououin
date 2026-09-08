@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useAccount } from "@/components/account";
+import { Trap } from "@/components/trap";
 
 type Mode = "qr" | "paste";
 
@@ -14,65 +15,80 @@ export const Connect = () => {
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const stop = useCallback(() => {
-    if (timer.current) {
-      clearInterval(timer.current);
-      timer.current = null;
-    }
-  }, []);
-
-  const begin = useCallback(async () => {
-    setError(null);
-    setImage(null);
-    stop();
-
-    const res = await fetch("/api/qr", { method: "POST" });
-    if (!res.ok) {
-      setError("could not reach riot");
+  useEffect(() => {
+    if (!(open && mode === "qr")) {
       return;
     }
-    const body = await res.json();
-    setImage(body.image);
 
-    timer.current = setInterval(async () => {
-      const check = await fetch("/api/qr");
-      if (check.status === 410) {
-        stop();
-        setError("code expired");
-        setImage(null);
-        return;
-      }
-      const outcome = await check.json();
-      if (outcome.status === "done") {
-        stop();
-        setOpen(false);
-        await refresh();
-      }
-      if (outcome.status === "failed") {
-        stop();
-        setError("riot rejected the scan");
-      }
-    }, 2000);
-  }, [refresh, setOpen, stop]);
+    let alive = true;
+    let handle: ReturnType<typeof setTimeout> | undefined;
+    setError(null);
+    setImage(null);
 
-  useEffect(() => {
-    if (open && mode === "qr") {
-      begin();
-    }
-    return stop;
-  }, [begin, mode, open, stop]);
-
-  useEffect(() => {
-    const key = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
+    const poll = async () => {
+      try {
+        const check = await fetch("/api/qr");
+        if (!alive) {
+          return;
+        }
+        if (check.status === 410) {
+          setError("code expired");
+          setImage(null);
+          return;
+        }
+        const outcome = await check.json();
+        if (!alive) {
+          return;
+        }
+        if (outcome.status === "done") {
+          setOpen(false);
+          await refresh();
+          return;
+        }
+        if (outcome.status === "failed") {
+          setError("riot rejected the scan");
+          return;
+        }
+        handle = setTimeout(poll, 2000);
+      } catch {
+        if (alive) {
+          setError("lost the connection to riot");
+        }
       }
     };
-    window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
-  }, [setOpen]);
+
+    const begin = async () => {
+      try {
+        const res = await fetch("/api/qr", { method: "POST" });
+        if (!alive) {
+          return;
+        }
+        if (!res.ok) {
+          setError("could not reach riot");
+          return;
+        }
+        const body = await res.json();
+        if (!alive) {
+          return;
+        }
+        setImage(body.image);
+        handle = setTimeout(poll, 2000);
+      } catch {
+        if (alive) {
+          setError("lost the connection to riot");
+        }
+      }
+    };
+
+    begin();
+    return () => {
+      alive = false;
+      if (handle) {
+        clearTimeout(handle);
+      }
+    };
+  }, [mode, open, refresh, setOpen]);
 
   if (!open) {
     return null;
@@ -81,13 +97,18 @@ export const Connect = () => {
   const submit = async () => {
     setBusy(true);
     setError(null);
-    const failure = await connect(value);
-    setBusy(false);
-    if (failure) {
-      setError(failure);
-      return;
+    try {
+      const failure = await connect(value);
+      if (failure) {
+        setError(failure);
+        return;
+      }
+      setValue("");
+    } catch {
+      setError("could not reach the server");
+    } finally {
+      setBusy(false);
     }
-    setValue("");
   };
 
   return (
@@ -99,16 +120,19 @@ export const Connect = () => {
     >
       <button
         aria-label="Close"
-        className="absolute inset-0 cursor-default bg-[#0a0a09]/94 backdrop-blur-sm"
+        className="bg-paper/92 absolute inset-0 cursor-default backdrop-blur-sm"
         onClick={() => setOpen(false)}
         type="button"
       />
 
-      <div className="border-paper/12 relative w-[min(94vw,460px)] border bg-[#111110] p-[clamp(20px,4vw,34px)]">
+      <Trap
+        className="border-rule-2 bg-paper-2 relative w-[min(94vw,460px)] border p-[clamp(20px,4vw,34px)]"
+        onClose={() => setOpen(false)}
+      >
         <div className="flex items-start justify-between gap-6">
-          <span className="cap text-paper/35">Connect</span>
+          <span className="cap text-ink-3">Connect</span>
           <button
-            className="cap text-paper/45 hover:text-paper cursor-pointer transition-colors duration-200"
+            className="cap text-ink-2 hover:text-ink cursor-pointer transition-colors duration-200"
             onClick={() => setOpen(false)}
             type="button"
           >
@@ -116,13 +140,13 @@ export const Connect = () => {
           </button>
         </div>
 
-        <p className="text-paper m-0 mt-[10px] text-[clamp(20px,3vw,26px)] leading-[1.12] font-light tracking-[-0.024em]">
+        <p className="text-ink m-0 mt-[10px] text-[clamp(20px,3vw,26px)] leading-[1.12] font-light tracking-[-0.024em]">
           {mode === "qr" ? "Scan with Riot Mobile" : "Paste your Riot cookie"}
         </p>
 
         {mode === "qr" ? (
           <div className="mt-[20px] grid justify-items-center gap-[16px]">
-            <div className="bg-paper grid size-[212px] place-items-center">
+            <div className="bg-ink grid size-[212px] place-items-center">
               {image ? (
                 <Image
                   alt="Riot login code"
@@ -133,25 +157,29 @@ export const Connect = () => {
                   width={212}
                 />
               ) : (
-                <span className="cap text-ink-3">Loading</span>
+                <span className="cap text-paper">Loading</span>
               )}
             </div>
-            <p className="text-paper/40 m-0 max-w-[30ch] text-center text-[12px] leading-[1.6] font-light">
+            <p className="text-ink-2 m-0 max-w-[32ch] text-center text-[12px] leading-[1.6] font-light">
               Open Riot Mobile, tap the QR button, and scan. Your password never
-              leaves Riot.
+              reaches this app.
             </p>
           </div>
         ) : (
           <div className="mt-[18px]">
+            <label className="cap text-ink-3 mb-[10px] block" htmlFor="cookie">
+              Cookie header
+            </label>
             <textarea
-              className="text-paper placeholder:text-paper/20 border-paper/15 focus:border-paper/40 h-[88px] w-full resize-none border bg-transparent p-3 font-mono text-[12px] leading-[1.5] outline-none"
+              className="text-ink placeholder:text-ink-3 border-rule-2 focus:border-ink-2 h-[88px] w-full resize-none border bg-transparent p-3 font-mono text-[12px] leading-[1.5] outline-none"
+              id="cookie"
               onChange={(event) => setValue(event.target.value)}
-              placeholder="the full cookie header from auth.riotgames.com"
+              placeholder="from auth.riotgames.com"
               spellCheck={false}
               value={value}
             />
             <button
-              className="cap border-paper/25 text-paper hover:bg-paper hover:text-ink mt-[14px] w-full cursor-pointer border py-[11px] transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40"
+              className="cap border-rule-2 text-ink hover:bg-ink hover:text-paper mt-[14px] w-full cursor-pointer border py-[11px] transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={busy || value.trim().length === 0}
               onClick={submit}
               type="button"
@@ -162,17 +190,19 @@ export const Connect = () => {
         )}
 
         {error ? (
-          <p className="text-accent m-0 mt-[14px] text-center font-mono text-[11px]">
+          <p
+            className="text-accent m-0 mt-[14px] text-center font-mono text-[11px]"
+            role="alert"
+          >
             {error}
           </p>
         ) : null}
 
-        <div className="border-paper/10 mt-[20px] flex items-center justify-between gap-4 border-t pt-[14px]">
-          <span className="cap text-paper/25">No password</span>
+        <div className="border-rule mt-[20px] flex items-center justify-between gap-4 border-t pt-[14px]">
+          <span className="cap text-ink-3">No password</span>
           <button
-            className="cap text-paper/35 hover:text-paper cursor-pointer transition-colors duration-200"
+            className="cap text-ink-2 hover:text-ink cursor-pointer transition-colors duration-200"
             onClick={() => {
-              stop();
               setError(null);
               setMode(mode === "qr" ? "paste" : "qr");
             }}
@@ -181,7 +211,7 @@ export const Connect = () => {
             {mode === "qr" ? "Paste cookie" : "Use qr code"}
           </button>
         </div>
-      </div>
+      </Trap>
     </div>
   );
 };
