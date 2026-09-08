@@ -17,6 +17,7 @@ const SHELL = Array.from({ length: 15 }, (_, index) => `shell-${index}`);
 type State =
   | { status: "loading" }
   | { status: "off" }
+  | { status: "failed" }
   | { status: "on"; handle: string; skins: Offer[] };
 
 const load = async (src: string) => {
@@ -37,20 +38,30 @@ export const Vault = () => {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    const stop = new AbortController();
     const pull = async () => {
       try {
-        const res = await fetch("/api/collection");
+        const res = await fetch("/api/collection", { signal: stop.signal });
+        if (stop.signal.aborted) {
+          return;
+        }
         if (!res.ok) {
-          setState({ status: "off" });
+          setState({ status: res.status === 401 ? "off" : "failed" });
           return;
         }
         const body = await res.json();
+        if (stop.signal.aborted) {
+          return;
+        }
         setState({ handle: body.handle, skins: body.skins, status: "on" });
       } catch {
-        setState({ status: "off" });
+        if (!stop.signal.aborted) {
+          setState({ status: "failed" });
+        }
       }
     };
     pull();
+    return () => stop.abort();
   }, [account.status]);
 
   const download = useCallback(async () => {
@@ -86,7 +97,7 @@ export const Vault = () => {
     ctx.font = `400 17px ${face}`;
     ctx.letterSpacing = "5px";
     ctx.fillText(
-      `${handle.toUpperCase()}   ${skins.length} SKINS`.trim(),
+      `${handle.toUpperCase()}   ${skins.length} SKINS   PRICES ESTIMATED`.trim(),
       PAD,
       110
     );
@@ -158,6 +169,23 @@ export const Vault = () => {
     );
   }
 
+  if (state.status === "failed") {
+    return (
+      <div className="border-rule grid justify-items-center gap-5 border py-20">
+        <p className="text-ink-2 m-0 text-[14px] font-light">
+          Could not reach Riot just now.
+        </p>
+        <button
+          className="cap border-rule-2 hover:bg-ink hover:text-paper cursor-pointer border px-[18px] py-[10px] transition-colors duration-300 hover:border-transparent"
+          onClick={() => window.location.reload()}
+          type="button"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
   if (state.status === "off") {
     return (
       <div className="grid justify-items-center gap-5 py-20">
@@ -179,7 +207,7 @@ export const Vault = () => {
     <div className="grid w-full min-w-0 gap-[clamp(20px,3vh,32px)]">
       <div className="border-rule flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3 border-b pb-[14px]">
         <span className="cap text-ink-3">
-          {state.handle} · {state.skins.length} skins
+          {state.handle} · {state.skins.length} skins · prices estimated
         </span>
         <button
           className="cap border-rule-2 hover:bg-ink hover:text-paper cursor-pointer border px-[16px] py-[9px] transition-colors duration-300 hover:border-transparent disabled:opacity-40"
