@@ -6,14 +6,13 @@
 
 > features?
 
-  ✓ today's four offers with real prices, straight from riot
+  ✓ today's four offers with the prices riot actually charges
   ✓ the real reset countdown, per account, not a guess at midnight
-  ✓ inspect any skin at full resolution, with every chroma
-  ✓ your whole collection, sorted by what it cost
+  ✓ inspect any skin at native resolution, with every chroma
+  ✓ your whole locker, sorted by what it is worth
   ✓ export the lot as one png worth posting
   ✓ hold several accounts and switch without signing in again
   ✓ sign in by scanning a code with riot mobile
-  ✓ sessions are encrypted and never leave your browser
 
 > run?
 
@@ -26,40 +25,49 @@
 > sign in?
 
   open the site, press connect, scan the code with riot mobile.
-  your password never touches this app, or any machine but riot's.
+  your password is never typed into this app and never seen by it.
 
   no phone to hand? paste the cookie header from auth.riotgames.com
   instead. same result, more clicks.
 
-> heads up?
+> where does my session live?
 
-  riot has no public api for any of this. the official developer
-  api gives you match history and server status. rso, its login,
-  has no scope for a store or a locker. every store checker that
-  exists talks to the internal endpoints the game client uses, and
-  so does this one.
+  riot gives back a session cookie. it is sealed with aes-256-gcm
+  and stored only in your browser, one httponly cookie per account.
+  no database, nothing on disk, nothing shared between people.
 
-  that makes your riot session cookie the key to the whole thing.
-  it is sealed with aes-256-gcm and kept in an httponly cookie in
-  your browser, one per account. nothing is written down on any
-  server, it is only ever sent back to riot, and logging out
-  deletes it. read the code before you trust it with an account.
+  it is not sealed from the server, though. every request sends the
+  sealed cookie back, the server decrypts it in memory to call riot
+  on your behalf, and forgets it. so: stored in your browser,
+  processed on the server, only ever sent onward to riot. logging
+  out deletes it. read the code before you trust it with an account.
 
-  riot has never banned anyone for reading their own store, and a
-  riot developer has said so in public. tolerated, not permitted.
+> is this allowed?
 
-  skin renders come from valorant-api.com at 512px, the largest
-  riot publishes. anything bigger would be upscaling, so nothing
-  here is ever drawn above its native size.
+  no. riot's valorant developer policy lists online store tracking
+  as an unapproved use case, because the official api has no
+  endpoint for it. rso, riot's login, has no scope for a store or a
+  locker either. this talks to the internal endpoints the game
+  client uses, like every other store checker.
 
-  prices outside today's store are derived from content tier,
-  because riot removed the offers endpoint. bundle exclusives like
-  champions skins will read low.
+  no one is known to have been banned for reading their own store,
+  and riot has left these tools alone for years. that is a pattern,
+  not a permission. riot can change the endpoints or their mind at
+  any time, and both would break this.
+
+> anything inaccurate?
+
+  prices outside today's store are worked out from content tier,
+  because riot removed the offers endpoint. they are labelled as
+  estimates, and bundle exclusives like champions skins read low.
+
+  skin art comes from valorant-api.com at 512px, the largest riot
+  publishes. nothing is ever drawn above its native size.
 
 > stack?
 
   next 16, react 19, tailwind 4, ultracite with oxlint and oxfmt.
-  no database. no analytics. no third party asset host but riot's.
+  no database. no analytics. no asset host but riot's.
 
 > links?
 
