@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import { useAccount } from "@/components/account";
+import { Code } from "@/components/code";
 import { Trap } from "@/components/trap";
 
 type Mode = "qr" | "paste";
@@ -11,7 +11,9 @@ type Mode = "qr" | "paste";
 export const Connect = () => {
   const { open, setOpen, connect, refresh } = useAccount();
   const [mode, setMode] = useState<Mode>("qr");
-  const [image, setImage] = useState<string | null>(null);
+  const [code, setCode] = useState<{ cells: number[]; size: number } | null>(
+    null
+  );
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -24,7 +26,7 @@ export const Connect = () => {
     let alive = true;
     let handle: ReturnType<typeof setTimeout> | undefined;
     setError(null);
-    setImage(null);
+    setCode(null);
 
     const poll = async () => {
       try {
@@ -34,7 +36,7 @@ export const Connect = () => {
         }
         if (check.status === 410) {
           setError("code expired");
-          setImage(null);
+          setCode(null);
           return;
         }
         const outcome = await check.json();
@@ -72,7 +74,7 @@ export const Connect = () => {
         if (!alive) {
           return;
         }
-        setImage(body.image);
+        setCode({ cells: body.cells, size: body.size });
         handle = setTimeout(poll, 2000);
       } catch {
         if (alive) {
@@ -126,7 +128,7 @@ export const Connect = () => {
       />
 
       <Trap
-        className="border-rule-2 bg-paper-2 relative w-[min(94vw,460px)] border p-[clamp(20px,4vw,34px)]"
+        className="border-rule-2 bg-paper-2 relative w-[min(94vw,470px)] border p-[clamp(20px,4vw,34px)]"
         onClose={() => setOpen(false)}
       >
         <div className="flex items-start justify-between gap-6">
@@ -146,18 +148,23 @@ export const Connect = () => {
 
         {mode === "qr" ? (
           <div className="mt-[20px] grid justify-items-center gap-[16px]">
-            <div className="bg-ink grid size-[212px] place-items-center">
-              {image ? (
-                <Image
-                  alt="Riot login code"
-                  className="size-full"
-                  height={212}
-                  src={image}
-                  unoptimized
-                  width={212}
-                />
-              ) : (
-                <span className="cap text-paper">Loading</span>
+            <div className="relative size-[248px] bg-[#eae7e2]">
+              <div
+                className="size-full transition-opacity duration-500"
+                style={{ opacity: code ? 1 : 0 }}
+              >
+                {code ? <Code cells={code.cells} size={code.size} /> : null}
+              </div>
+              {code ? null : (
+                <div className="absolute inset-[14%] grid animate-pulse grid-cols-3 grid-rows-3 gap-[12%]">
+                  <span className="border-[3px] border-[#0d0d0c]/20" />
+                  <span />
+                  <span className="border-[3px] border-[#0d0d0c]/20" />
+                  <span />
+                  <span />
+                  <span />
+                  <span className="border-[3px] border-[#0d0d0c]/20" />
+                </div>
               )}
             </div>
             <p className="text-ink-2 m-0 max-w-[32ch] text-center text-[12px] leading-[1.6] font-light">

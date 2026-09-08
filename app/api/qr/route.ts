@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { toDataURL } from "qrcode";
+import { create } from "qrcode";
 
 import { attach, slot } from "@/lib/accounts";
 import { poll, start } from "@/lib/qr";
@@ -27,13 +27,11 @@ export const POST = async () => {
     return NextResponse.json({ error: "riot refused" }, { status: 502 });
   }
 
-  const image = await toDataURL(session.url, {
-    color: { dark: "#121211", light: "#eeedeb" },
-    margin: 1,
-    width: 512,
+  const code = create(session.url, { errorCorrectionLevel: "H" });
+  const response = NextResponse.json({
+    cells: Array.from(code.modules.data, (bit) => (bit ? 1 : 0)),
+    size: code.modules.size,
   });
-
-  const response = NextResponse.json({ image, url: session.url });
   response.cookies.set(PENDING, seal(JSON.stringify(session)), {
     ...shape,
     maxAge: 300,
