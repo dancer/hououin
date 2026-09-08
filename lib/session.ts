@@ -5,8 +5,6 @@ import {
   scryptSync,
 } from "node:crypto";
 
-export const COOKIE = "hououin";
-
 const key = () => {
   const secret = process.env.SESSION_SECRET;
   if (!secret) {

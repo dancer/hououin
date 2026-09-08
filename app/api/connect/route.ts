@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { identity, pasted, redeem } from "@/lib/riot";
-import { COOKIE, seal } from "@/lib/session";
+import { attach, slot } from "@/lib/accounts";
+import { pasted, whoami } from "@/lib/riot";
 
 export const runtime = "nodejs";
-
-const MONTH = 60 * 60 * 24 * 30;
 
 export const POST = async (request: Request) => {
   const body = await request.json().catch(() => null);
@@ -16,25 +14,16 @@ export const POST = async (request: Request) => {
     return NextResponse.json({ error: "no ssid found" }, { status: 400 });
   }
 
-  const session = await redeem(jar);
-  if (!session) {
+  const who = await whoami(jar);
+  if (!who) {
     return NextResponse.json({ error: "cookie rejected" }, { status: 401 });
   }
 
-  const who = await identity(session.tokens);
   const response = NextResponse.json({ handle: who.handle });
-  response.cookies.set(COOKIE, seal(JSON.stringify(session.jar)), {
-    httpOnly: true,
-    maxAge: MONTH,
-    path: "/",
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+  attach(response, {
+    handle: who.handle,
+    id: slot(who.puuid),
+    jar: who.jar,
   });
-  return response;
-};
-
-export const DELETE = () => {
-  const response = NextResponse.json({ ok: true });
-  response.cookies.delete(COOKIE);
   return response;
 };

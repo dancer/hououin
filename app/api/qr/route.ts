@@ -2,15 +2,16 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { toDataURL } from "qrcode";
 
+import { attach, slot } from "@/lib/accounts";
 import { poll, start } from "@/lib/qr";
 import type { Pending } from "@/lib/qr";
-import { COOKIE, seal, unseal } from "@/lib/session";
+import { whoami } from "@/lib/riot";
+import { seal, unseal } from "@/lib/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const PENDING = "hououin.qr";
-const MONTH = 60 * 60 * 24 * 30;
 const COUNTRY = "GB";
 
 const shape = {
@@ -60,11 +61,13 @@ export const GET = async () => {
     });
   }
 
-  const response = NextResponse.json({ status: "done" });
-  response.cookies.set(COOKIE, seal(JSON.stringify(result.jar)), {
-    ...shape,
-    maxAge: MONTH,
-  });
+  const who = await whoami(result.jar);
+  if (!who) {
+    return NextResponse.json({ status: "failed" });
+  }
+
+  const response = NextResponse.json({ handle: who.handle, status: "done" });
+  attach(response, { handle: who.handle, id: slot(who.puuid), jar: who.jar });
   response.cookies.delete(PENDING);
   return response;
 };

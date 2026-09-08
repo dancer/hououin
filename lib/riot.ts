@@ -209,6 +209,15 @@ const levels = async () => {
   return map;
 };
 
+export const whoami = async (jar: Jar) => {
+  const session = await redeem(jar);
+  if (!session) {
+    return null;
+  }
+  const who = await identity(session.tokens);
+  return { handle: who.handle, jar: session.jar, puuid: who.puuid };
+};
+
 interface Boot {
   ent: string;
   handle: string;
