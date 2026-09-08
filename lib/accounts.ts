@@ -9,6 +9,9 @@ import { seal, unseal } from "@/lib/session";
 const PREFIX = "hououin_";
 const ACTIVE = "hououin_active";
 const MONTH = 60 * 60 * 24 * 30;
+const SLOT = /^[a-f0-9]{12}$/u;
+
+export const valid = (id: string) => SLOT.test(id);
 
 const shape = {
   httpOnly: true,
