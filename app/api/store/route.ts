@@ -16,12 +16,12 @@ export const GET = async () => {
     return NextResponse.json({ error: "not connected" }, { status: 401 });
   }
 
-  const ssid = unseal(token);
-  if (!ssid) {
+  const raw = unseal(token);
+  if (!raw) {
     return NextResponse.json({ error: "bad session" }, { status: 401 });
   }
 
-  const live = await shop(ssid);
+  const live = await shop(JSON.parse(raw));
   if (!live) {
     return NextResponse.json({ error: "session expired" }, { status: 401 });
   }
@@ -31,7 +31,7 @@ export const GET = async () => {
     offers: live.offers,
     seconds: live.seconds,
   });
-  response.cookies.set(COOKIE, seal(live.ssid), {
+  response.cookies.set(COOKIE, seal(JSON.stringify(live.jar)), {
     httpOnly: true,
     maxAge: MONTH,
     path: "/",

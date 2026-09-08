@@ -29,6 +29,7 @@ interface Value {
   setOpen: (next: boolean) => void;
   connect: (cookie: string) => Promise<string | null>;
   disconnect: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 const Context = createContext<Value | null>(null);
@@ -84,8 +85,8 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const value = useMemo(
-    () => ({ connect, disconnect, open, setOpen, state }),
-    [connect, disconnect, open, state]
+    () => ({ connect, disconnect, open, refresh: load, setOpen, state }),
+    [connect, disconnect, load, open, state]
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;

@@ -1,3 +1,5 @@
+import { absorb, parse, serialise } from "@/lib/jar";
+import type { Jar } from "@/lib/jar";
 import type { Offer, Variant } from "@/lib/offers";
 
 const AUTHORIZE =
@@ -10,6 +12,8 @@ const WEAPONS = "https://valorant-api.com/v1/weapons";
 const TIERS = "https://valorant-api.com/v1/contenttiers";
 const VP = "85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741";
 const HOUR = 3_600_000;
+
+export const pasted = (header: string) => parse(header);
 
 const PLATFORM = Buffer.from(
   JSON.stringify({
@@ -29,7 +33,7 @@ export interface Shop {
   handle: string;
   seconds: number;
   offers: Offer[];
-  ssid: string;
+  jar: Jar;
 }
 
 interface Entry {
@@ -78,19 +82,9 @@ const clientHeaders = async () => {
   };
 };
 
-const readCookie = (header: string, name: string) => {
-  const found = header
-    .split(/;\s*/u)
-    .map((pair) => pair.split("="))
-    .find(([key]) => key.trim() === name);
-  return found?.slice(1).join("=") ?? null;
-};
-
-export const extract = (header: string) => readCookie(header, "ssid");
-
-export const redeem = async (ssid: string) => {
+export const redeem = async (jar: Jar) => {
   const res = await fetch(AUTHORIZE, {
-    headers: { cookie: `ssid=${ssid}`, "user-agent": await agent() },
+    headers: { cookie: serialise(jar), "user-agent": await agent() },
     redirect: "manual",
   });
 
@@ -111,9 +105,10 @@ export const redeem = async (ssid: string) => {
     return null;
   }
 
-  const rotated =
-    readCookie(res.headers.getSetCookie().join("; "), "ssid") ?? ssid;
-  return { ssid: rotated, tokens: { access, id } satisfies Tokens };
+  return {
+    jar: absorb(jar, res.headers),
+    tokens: { access, id } satisfies Tokens,
+  };
 };
 
 const bearer = (tokens: Tokens) => ({
@@ -194,8 +189,8 @@ const levels = async () => {
   return map;
 };
 
-export const shop = async (ssid: string): Promise<Shop | null> => {
-  const session = await redeem(ssid);
+export const shop = async (jar: Jar): Promise<Shop | null> => {
+  const session = await redeem(jar);
   if (!session) {
     return null;
   }
@@ -248,8 +243,8 @@ export const shop = async (ssid: string): Promise<Shop | null> => {
 
   return {
     handle: who.handle,
+    jar: session.jar,
     offers,
     seconds: panel.SingleItemOffersRemainingDurationInSeconds,
-    ssid: session.ssid,
   };
 };

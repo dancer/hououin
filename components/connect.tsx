@@ -1,21 +1,68 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAccount } from "@/components/account";
 
-const STEPS = [
-  "Sign in at account.riotgames.com with Remember me ticked",
-  "Open devtools, Network tab, then load auth.riotgames.com",
-  "Click the auth.riotgames.com request and find Request Headers",
-  "Copy the whole cookie header and paste it below",
-];
+type Mode = "qr" | "paste";
 
 export const Connect = () => {
-  const { open, setOpen, connect } = useAccount();
+  const { open, setOpen, connect, refresh } = useAccount();
+  const [mode, setMode] = useState<Mode>("qr");
+  const [image, setImage] = useState<string | null>(null);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stop = useCallback(() => {
+    if (timer.current) {
+      clearInterval(timer.current);
+      timer.current = null;
+    }
+  }, []);
+
+  const begin = useCallback(async () => {
+    setError(null);
+    setImage(null);
+    stop();
+
+    const res = await fetch("/api/qr", { method: "POST" });
+    if (!res.ok) {
+      setError("could not reach riot");
+      return;
+    }
+    const body = await res.json();
+    setImage(body.image);
+
+    timer.current = setInterval(async () => {
+      const check = await fetch("/api/qr");
+      if (check.status === 410) {
+        stop();
+        setError("code expired");
+        setImage(null);
+        return;
+      }
+      const outcome = await check.json();
+      if (outcome.status === "done") {
+        stop();
+        setOpen(false);
+        await refresh();
+      }
+      if (outcome.status === "failed") {
+        stop();
+        setError("riot rejected the scan");
+      }
+    }, 2000);
+  }, [refresh, setOpen, stop]);
+
+  useEffect(() => {
+    if (open && mode === "qr") {
+      begin();
+    }
+    return stop;
+  }, [begin, mode, open, stop]);
 
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -57,7 +104,7 @@ export const Connect = () => {
         type="button"
       />
 
-      <div className="border-paper/12 relative w-[min(94vw,560px)] border bg-[#111110] p-[clamp(20px,4vw,36px)]">
+      <div className="border-paper/12 relative w-[min(94vw,460px)] border bg-[#111110] p-[clamp(20px,4vw,34px)]">
         <div className="flex items-start justify-between gap-6">
           <span className="cap text-paper/35">Connect</span>
           <button
@@ -69,49 +116,69 @@ export const Connect = () => {
           </button>
         </div>
 
-        <p className="text-paper m-0 mt-[10px] text-[clamp(20px,3vw,27px)] leading-[1.12] font-light tracking-[-0.024em]">
-          Paste your Riot cookie
+        <p className="text-paper m-0 mt-[10px] text-[clamp(20px,3vw,26px)] leading-[1.12] font-light tracking-[-0.024em]">
+          {mode === "qr" ? "Scan with Riot Mobile" : "Paste your Riot cookie"}
         </p>
 
-        <ol className="text-paper/45 m-0 mt-[18px] grid list-none gap-[7px] p-0 text-[12px] leading-[1.55] font-light">
-          {STEPS.map((step, index) => (
-            <li className="flex gap-3" key={step}>
-              <span className="text-paper/25 font-mono tabular-nums">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              {step}
-            </li>
-          ))}
-        </ol>
-
-        <textarea
-          className="text-paper placeholder:text-paper/20 border-paper/15 focus:border-paper/40 mt-[18px] h-[92px] w-full resize-none border bg-transparent p-3 font-mono text-[12px] leading-[1.5] outline-none"
-          onChange={(event) => setValue(event.target.value)}
-          placeholder="ssid=eyJ...   or the full cookie header"
-          spellCheck={false}
-          value={value}
-        />
-
-        <p className="text-paper/30 m-0 mt-[10px] text-[11px] leading-[1.5] font-light">
-          This is password equivalent. It is encrypted, kept in an httpOnly
-          cookie on this machine, and only ever sent to auth.riotgames.com.
-        </p>
+        {mode === "qr" ? (
+          <div className="mt-[20px] grid justify-items-center gap-[16px]">
+            <div className="bg-paper grid size-[212px] place-items-center">
+              {image ? (
+                <Image
+                  alt="Riot login code"
+                  className="size-full"
+                  height={212}
+                  src={image}
+                  unoptimized
+                  width={212}
+                />
+              ) : (
+                <span className="cap text-ink-3">Loading</span>
+              )}
+            </div>
+            <p className="text-paper/40 m-0 max-w-[30ch] text-center text-[12px] leading-[1.6] font-light">
+              Open Riot Mobile, tap the QR button, and scan. Your password never
+              leaves Riot.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-[18px]">
+            <textarea
+              className="text-paper placeholder:text-paper/20 border-paper/15 focus:border-paper/40 h-[88px] w-full resize-none border bg-transparent p-3 font-mono text-[12px] leading-[1.5] outline-none"
+              onChange={(event) => setValue(event.target.value)}
+              placeholder="the full cookie header from auth.riotgames.com"
+              spellCheck={false}
+              value={value}
+            />
+            <button
+              className="cap border-paper/25 text-paper hover:bg-paper hover:text-ink mt-[14px] w-full cursor-pointer border py-[11px] transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={busy || value.trim().length === 0}
+              onClick={submit}
+              type="button"
+            >
+              {busy ? "Checking" : "Connect"}
+            </button>
+          </div>
+        )}
 
         {error ? (
-          <p className="text-accent m-0 mt-[10px] font-mono text-[11px]">
+          <p className="text-accent m-0 mt-[14px] text-center font-mono text-[11px]">
             {error}
           </p>
         ) : null}
 
-        <div className="mt-[18px] flex items-center justify-between gap-4">
-          <span className="cap text-paper/25">Never shared</span>
+        <div className="border-paper/10 mt-[20px] flex items-center justify-between gap-4 border-t pt-[14px]">
+          <span className="cap text-paper/25">No password</span>
           <button
-            className="cap border-paper/25 text-paper hover:bg-paper hover:text-ink cursor-pointer border px-[18px] py-[10px] transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={busy || value.trim().length === 0}
-            onClick={submit}
+            className="cap text-paper/35 hover:text-paper cursor-pointer transition-colors duration-200"
+            onClick={() => {
+              stop();
+              setError(null);
+              setMode(mode === "qr" ? "paste" : "qr");
+            }}
             type="button"
           >
-            {busy ? "Checking" : "Connect"}
+            {mode === "qr" ? "Paste cookie" : "Use qr code"}
           </button>
         </div>
       </div>
