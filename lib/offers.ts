@@ -4,6 +4,7 @@ export interface Variant {
 }
 
 export interface Offer {
+  colour: string;
   image: string;
   name: string;
   price: number;
@@ -17,6 +18,7 @@ const skin = (slug: string, names: string[]): Variant[] =>
 
 export const offers: Offer[] = [
   {
+    colour: "#d1548d",
     image: "/skins/vandal/base.png",
     name: "Prime Vandal",
     price: 1775,
@@ -25,6 +27,7 @@ export const offers: Offer[] = [
     weapon: "Vandal",
   },
   {
+    colour: "#fad663",
     image: "/skins/operator/base.png",
     name: "Elderflame Operator",
     price: 2475,
@@ -33,6 +36,7 @@ export const offers: Offer[] = [
     weapon: "Operator",
   },
   {
+    colour: "#d1548d",
     image: "/skins/sheriff/base.png",
     name: "Ion Sheriff",
     price: 1775,
@@ -41,6 +45,7 @@ export const offers: Offer[] = [
     weapon: "Sheriff",
   },
   {
+    colour: "#5a9fe2",
     image: "/skins/frenzy/base.png",
     name: "Sensation Frenzy",
     price: 875,

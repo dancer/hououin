@@ -11,6 +11,14 @@ const VERSION = "https://valorant-api.com/v1/version";
 const WEAPONS = "https://valorant-api.com/v1/weapons";
 const TIERS = "https://valorant-api.com/v1/contenttiers";
 const VP = "85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741";
+const SKINS = "e7c63390-eda7-46e0-bb7a-a6abdacd2433";
+const TIERS_VP: Record<string, number> = {
+  Deluxe: 1275,
+  Exclusive: 2175,
+  Premium: 1775,
+  Select: 875,
+  Ultra: 2475,
+};
 const HOUR = 3_600_000;
 
 export const pasted = (header: string) => parse(header);
@@ -37,6 +45,7 @@ export interface Shop {
 }
 
 interface Entry {
+  colour: string;
   name: string;
   weapon: string;
   tier: string;
@@ -157,20 +166,27 @@ const levels = async () => {
     tierRes.json(),
   ]);
 
-  const tierName = new Map<string, string>(
-    tiers.data.map((tier: { uuid: string; devName: string }) => [
-      tier.uuid,
-      tier.devName,
-    ])
+  const tierName = new Map<string, { colour: string; name: string }>(
+    tiers.data.map(
+      (tier: { uuid: string; devName: string; highlightColor: string }) => [
+        tier.uuid,
+        {
+          colour: `#${(tier.highlightColor ?? "9b9a9633").slice(0, 6)}`,
+          name: tier.devName,
+        },
+      ]
+    )
   );
 
   const map = new Map<string, Entry>();
   for (const weapon of weapons.data) {
     for (const skin of weapon.skins) {
+      const meta = tierName.get(skin.contentTierUuid);
       const entry: Entry = {
+        colour: meta?.colour ?? "#9b9a96",
         image: skin.chromas?.[0]?.fullRender ?? skin.displayIcon ?? "",
         name: skin.displayName,
-        tier: tierName.get(skin.contentTierUuid) ?? "Standard",
+        tier: meta?.name ?? "Standard",
         variants: (skin.chromas ?? [])
           .filter((chroma: { fullRender: string | null }) => chroma.fullRender)
           .map((chroma: { fullRender: string; displayName: string }) => ({
@@ -179,8 +195,12 @@ const levels = async () => {
           })),
         weapon: weapon.displayName,
       };
+      map.set(skin.uuid, entry);
       for (const level of skin.levels ?? []) {
         map.set(level.uuid, entry);
+      }
+      for (const chroma of skin.chromas ?? []) {
+        map.set(chroma.uuid, entry);
       }
     }
   }
@@ -189,33 +209,63 @@ const levels = async () => {
   return map;
 };
 
-export const shop = async (jar: Jar): Promise<Shop | null> => {
+interface Boot {
+  ent: string;
+  handle: string;
+  jar: Jar;
+  puuid: string;
+  region: string;
+  tokens: Tokens;
+}
+
+const bootstrap = async (jar: Jar): Promise<Boot | null> => {
   const session = await redeem(jar);
   if (!session) {
     return null;
   }
-
   const { tokens } = session;
-  const [who, ent, region, lookup] = await Promise.all([
+  const [who, ent, region] = await Promise.all([
     identity(tokens),
     entitlement(tokens),
     shard(tokens),
+  ]);
+  return {
+    ent,
+    handle: who.handle,
+    jar: session.jar,
+    puuid: who.puuid,
+    region,
+    tokens,
+  };
+};
+
+const call = async (url: string, boot: Boot, init: RequestInit = {}) => {
+  const headers = await clientHeaders();
+  return await fetch(url, {
+    ...init,
+    headers: {
+      ...bearer(boot.tokens),
+      ...headers,
+      "Content-Type": "application/json",
+      "X-Riot-Entitlements-JWT": boot.ent,
+    },
+  });
+};
+
+export const shop = async (jar: Jar): Promise<Shop | null> => {
+  const boot = await bootstrap(jar);
+  if (!boot) {
+    return null;
+  }
+
+  const [res, lookup] = await Promise.all([
+    call(
+      `https://pd.${boot.region}.a.pvp.net/store/v3/storefront/${boot.puuid}`,
+      boot,
+      { body: JSON.stringify({}), method: "POST" }
+    ),
     levels(),
   ]);
-
-  const res = await fetch(
-    `https://pd.${region}.a.pvp.net/store/v3/storefront/${who.puuid}`,
-    {
-      body: JSON.stringify({}),
-      headers: {
-        ...bearer(tokens),
-        ...(await clientHeaders()),
-        "Content-Type": "application/json",
-        "X-Riot-Entitlements-JWT": ent,
-      },
-      method: "POST",
-    }
-  );
 
   if (!res.ok) {
     throw new Error(`storefront ${res.status}`);
@@ -231,6 +281,7 @@ export const shop = async (jar: Jar): Promise<Shop | null> => {
     }) => {
       const entry = lookup.get(offer.Rewards[0].ItemID);
       return {
+        colour: entry?.colour ?? "#9b9a96",
         image: entry?.image ?? "",
         name: entry?.name ?? "Unknown",
         price: offer.Cost[VP] ?? 0,
@@ -242,9 +293,69 @@ export const shop = async (jar: Jar): Promise<Shop | null> => {
   );
 
   return {
-    handle: who.handle,
-    jar: session.jar,
+    handle: boot.handle,
+    jar: boot.jar,
     offers,
     seconds: panel.SingleItemOffersRemainingDurationInSeconds,
   };
+};
+
+export interface Collection {
+  handle: string;
+  jar: Jar;
+  skins: Offer[];
+}
+
+const worth = (tier: string, weapon: string) => {
+  const base = TIERS_VP[tier] ?? 0;
+  return weapon === "Melee" ? base * 2 : base;
+};
+
+export const collection = async (jar: Jar): Promise<Collection | null> => {
+  const boot = await bootstrap(jar);
+  if (!boot) {
+    return null;
+  }
+
+  const [ownedRes, lookup] = await Promise.all([
+    call(
+      `https://pd.${boot.region}.a.pvp.net/store/v1/entitlements/${boot.puuid}/${SKINS}`,
+      boot
+    ),
+    levels(),
+  ]);
+
+  if (!ownedRes.ok) {
+    throw new Error(`entitlements ${ownedRes.status}`);
+  }
+
+  const owned = await ownedRes.json();
+  const entries: { ItemID: string }[] =
+    owned.Entitlements ??
+    owned.EntitlementsByTypes?.flatMap(
+      (group: { Entitlements: { ItemID: string }[] }) => group.Entitlements
+    ) ??
+    [];
+
+  const seen = new Set<string>();
+  const skins: Offer[] = [];
+  for (const item of entries) {
+    const entry = lookup.get(item.ItemID);
+    if (!entry || seen.has(entry.name)) {
+      continue;
+    }
+    seen.add(entry.name);
+    skins.push({
+      colour: entry.colour,
+      image: entry.image,
+      name: entry.name,
+      price: worth(entry.tier, entry.weapon),
+      tier: entry.tier,
+      variants: entry.variants,
+      weapon: entry.weapon,
+    });
+  }
+
+  skins.sort((a, b) => b.price - a.price || a.name.localeCompare(b.name));
+  return { handle: boot.handle, jar: boot.jar, skins };
 };

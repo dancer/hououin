@@ -3,32 +3,13 @@ import Link from "next/link";
 import { Account, AccountProvider } from "@/components/account";
 import { Connect } from "@/components/connect";
 import { Store } from "@/components/store";
-import { offers, total } from "@/lib/offers";
 
-const REPO = "https://github.com/dancer/hououin";
 const HEADLINE = "See your store before you launch the game";
-
-interface Fact {
-  term: string;
-  lines: string[];
-}
-
-const facts: Fact[] = [
-  { lines: ["Valorant store watcher", "Read only"], term: "What" },
-  { lines: ["Daily rotation", "Your collection"], term: "Shows" },
-  {
-    lines: [`${offers.length} offers`, `${total.toLocaleString("en-US")} VP`],
-    term: "Today",
-  },
-  { lines: ["Source"], term: "Elsewhere" },
-];
-
-const line = "m-0 text-ink-2 text-[13px] leading-[1.75] font-light";
 
 export default function Home() {
   return (
     <AccountProvider>
-      <div className="grid min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto]">
+      <div className="grid min-h-dvh grid-rows-[auto_minmax(0,1fr)]">
         <header className="px-edge pt-edge">
           <div className="border-rule flex items-center justify-between gap-6 border-b pb-[clamp(14px,2vh,22px)]">
             <Link
@@ -37,7 +18,15 @@ export default function Home() {
             >
               hououin.
             </Link>
-            <Account />
+            <div className="flex items-center gap-[clamp(16px,2.4vw,30px)]">
+              <Link
+                className="cap text-ink-3 hover:text-ink transition-colors duration-200"
+                href="/collection"
+              >
+                Collection
+              </Link>
+              <Account />
+            </div>
           </div>
         </header>
 
@@ -59,47 +48,17 @@ export default function Home() {
             </h1>
 
             <p
-              className={`${line} rise max-w-[34ch]`}
+              className="text-ink-2 rise m-0 max-w-[34ch] text-[13px] leading-[1.75] font-light"
               style={{ animationDelay: "540ms" }}
             >
               {
-                "Sign in with Riot and read today's four offers, what they cost, and the skins already sitting in your collection. Nothing to install."
+                "Scan once with Riot Mobile and read today's four offers, what they cost, and everything already in your collection."
               }
             </p>
           </div>
 
           <Store />
         </main>
-
-        <footer className="px-edge pb-edge">
-          <dl className="border-rule m-0 grid grid-cols-2 gap-x-[clamp(20px,5vw,64px)] gap-y-6 border-t pt-[clamp(16px,2.4vh,26px)] sm:flex sm:flex-wrap sm:items-end sm:gap-x-[clamp(24px,5vw,64px)]">
-            {facts.map((fact, index) => (
-              <div
-                className={
-                  index === facts.length - 1 ? "sm:ml-auto" : undefined
-                }
-                key={fact.term}
-              >
-                <dt className="cap text-ink-3 mb-[11px]">{fact.term}</dt>
-                {fact.lines.map((text) => (
-                  <dd className={line} key={text}>
-                    {text === "Source" ? (
-                      <a
-                        className="hover:text-ink transition-colors duration-200"
-                        href={REPO}
-                        rel="noopener"
-                      >
-                        {text}
-                      </a>
-                    ) : (
-                      text
-                    )}
-                  </dd>
-                ))}
-              </div>
-            ))}
-          </dl>
-        </footer>
       </div>
       <Connect />
     </AccountProvider>

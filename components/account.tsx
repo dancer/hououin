@@ -98,7 +98,7 @@ export const Account = () => {
   if (state.status === "on") {
     return (
       <button
-        className="cap border-rule-2 hover:bg-ink hover:text-paper cursor-pointer border px-[18px] py-[10px] transition-colors duration-300 hover:border-transparent"
+        className="cap border-rule-2 hover:bg-ink hover:text-paper max-w-[18ch] cursor-pointer truncate border px-[18px] py-[10px] transition-colors duration-300 hover:border-transparent"
         onClick={disconnect}
         type="button"
       >

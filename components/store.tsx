@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 
 import { useAccount } from "@/components/account";
@@ -47,7 +47,11 @@ export const Store = () => {
   const [clock, setClock] = useState({ burned: 0, countdown: "--:--:--" });
 
   const live = state.status === "on" ? state : null;
-  const deadline = live ? Date.now() + live.seconds * 1000 : null;
+  const seconds = live?.seconds ?? null;
+  const deadline = useMemo(
+    () => (seconds === null ? null : Date.now() + seconds * 1000),
+    [seconds]
+  );
 
   useEffect(() => {
     const tick = () => setClock(read(deadline));
