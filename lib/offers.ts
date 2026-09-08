@@ -1,40 +1,58 @@
 export interface Offer {
+  height: number;
   name: string;
-  weapon: string;
-  tier: string;
   price: number;
-  image: string;
+  slug: string;
+  tier: string;
+  variants: string[];
+  weapon: string;
+  width: number;
 }
 
 export const offers: Offer[] = [
   {
-    image: "/skins/vandal.png",
+    height: 148,
     name: "Prime Vandal",
     price: 1775,
+    slug: "vandal",
     tier: "Premium",
+    variants: ["base", "orange", "blue", "yellow"],
     weapon: "Vandal",
+    width: 512,
   },
   {
-    image: "/skins/operator.png",
+    height: 100,
     name: "Elderflame Operator",
     price: 2475,
+    slug: "operator",
     tier: "Ultra",
+    variants: ["base", "red", "blue", "dark"],
     weapon: "Operator",
+    width: 512,
   },
   {
-    image: "/skins/sheriff.png",
+    height: 240,
     name: "Ion Sheriff",
     price: 1775,
+    slug: "sheriff",
     tier: "Premium",
+    variants: ["base"],
     weapon: "Sheriff",
+    width: 512,
   },
   {
-    image: "/skins/frenzy.png",
+    height: 360,
     name: "Sensation Frenzy",
     price: 875,
+    slug: "frenzy",
     tier: "Select",
+    variants: ["base"],
     weapon: "Frenzy",
+    width: 512,
   },
 ];
+
+export const render = (slug: string, variant: string) =>
+  `/skins/${slug}/${variant}.png`;
 
 export const total = offers.reduce((sum, offer) => sum + offer.price, 0);

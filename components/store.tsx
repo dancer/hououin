@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { MouseEvent } from "react";
 
 import { Viewer } from "@/components/viewer";
-import { offers } from "@/lib/offers";
+import { offers, render } from "@/lib/offers";
 
 const DAY = 86_400_000;
 const EASE = "cubic-bezier(0.22,1,0.36,1)";
@@ -96,7 +96,7 @@ export const Store = () => {
                     fill
                     priority={index === 0}
                     sizes="(max-width: 640px) 60vw, 50vw"
-                    src={offer.image}
+                    src={render(offer.slug, offer.variants[0])}
                   />
                 </span>
 
@@ -121,7 +121,7 @@ export const Store = () => {
                       </span>
                     </span>
                     <span className="cap text-paper/35 hidden whitespace-nowrap sm:block">
-                      Inspect 3d
+                      Inspect
                     </span>
                   </span>
                 </span>
