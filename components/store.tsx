@@ -88,14 +88,15 @@ export const Store = () => {
                   transitionDelay: open ? "180ms" : "0ms",
                 }}
               >
-                <span className="absolute inset-x-[6%] top-[15%] bottom-[31%]">
+                <span className="absolute top-[15%] bottom-[31%] left-1/2 w-[min(88%,512px)] -translate-x-1/2">
                   <Image
                     alt=""
                     aria-hidden="true"
                     className="object-contain drop-shadow-[0_18px_34px_rgba(0,0,0,0.6)]"
                     fill
                     priority={index === 0}
-                    sizes="(max-width: 640px) 60vw, 50vw"
+                    sizes="512px"
+                    unoptimized
                     src={render(offer.slug, offer.variants[0])}
                   />
                 </span>
