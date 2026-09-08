@@ -79,7 +79,7 @@ export const Vault = () => {
 
     ctx.fillStyle = "#eeedeb";
     ctx.font = `500 30px ${face}`;
-    ctx.fillText("hououin.", PAD, 74);
+    ctx.fillText("hououin.com", PAD, 74);
 
     ctx.fillStyle = "#6a6965";
     ctx.font = `400 17px ${face}`;
