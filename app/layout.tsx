@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 
 import { AccountProvider } from "@/components/account";
 import { Connect } from "@/components/connect";
-import { chosen, roster } from "@/lib/accounts";
+import { Footer } from "@/components/footer";
+import { load } from "@/lib/accounts";
 
 import "./globals.css";
 
@@ -36,14 +37,20 @@ export default async function RootLayout({
 }: {
   children: ReactNode;
 }) {
-  const [all, active] = await Promise.all([roster(), chosen()]);
-  const seats = all.map((entry) => ({ handle: entry.handle, id: entry.id }));
+  const { accounts, active } = await load();
+  const seats = accounts.map((entry) => ({
+    handle: entry.handle,
+    id: entry.id,
+  }));
 
   return (
     <html className={`${inter.variable} ${jetbrains.variable}`} lang="en">
       <body className="bg-paper text-ink font-sans antialiased">
         <AccountProvider active={active?.id ?? ""} seats={seats}>
-          {children}
+          <div className="grid min-h-dvh grid-rows-[minmax(0,1fr)_auto]">
+            {children}
+            <Footer />
+          </div>
           <Connect />
         </AccountProvider>
       </body>

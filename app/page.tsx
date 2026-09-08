@@ -1,3 +1,4 @@
+import { Pitch } from "@/components/pitch";
 import { Store } from "@/components/store";
 import { Topbar } from "@/components/topbar";
 
@@ -5,7 +6,7 @@ const HEADLINE = "See your store before you launch the game";
 
 export default function Home() {
   return (
-    <div className="grid min-h-dvh grid-rows-[auto_minmax(0,1fr)]">
+    <div className="grid grid-rows-[auto_minmax(0,1fr)]">
       <header className="px-edge pt-edge">
         <Topbar here="store" />
       </header>
@@ -27,14 +28,7 @@ export default function Home() {
             ))}
           </h1>
 
-          <p
-            className="text-ink-2 rise m-0 max-w-[34ch] text-[13px] leading-[1.75] font-light"
-            style={{ animationDelay: "540ms" }}
-          >
-            {
-              "Scan once with Riot Mobile and read today's four offers, what they cost, and everything already in your collection."
-            }
-          </p>
+          <Pitch />
         </div>
 
         <Store />

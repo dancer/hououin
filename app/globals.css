@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-paper: #eeedeb;
-  --color-paper-2: #e5e4e1;
-  --color-ink: #121211;
-  --color-ink-2: #5c5b58;
-  --color-ink-3: #9b9a96;
-  --color-rule: #dcdbd7;
-  --color-rule-2: #c7c6c1;
-  --color-accent: #b4552c;
+  --color-paper: #0d0d0c;
+  --color-paper-2: #161615;
+  --color-ink: #eae7e2;
+  --color-ink-2: #b0aca5;
+  --color-ink-3: #8a8781;
+  --color-rule: #201f1d;
+  --color-rule-2: #302e2b;
+  --color-accent: #d9744a;
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
@@ -26,10 +26,10 @@
 
 @utility slab {
   background: radial-gradient(
-    circle at var(--x, 30%) var(--y, 22%),
-    #4f4e49 0%,
-    #1b1a18 54%,
-    #080807 100%
+    circle at var(--x, 50%) var(--y, 26%),
+    #2a2926 0%,
+    #181817 46%,
+    #111110 100%
   );
 }
 
@@ -64,7 +64,7 @@
 
 @layer base {
   html {
-    color-scheme: light;
+    color-scheme: dark;
     scrollbar-width: none;
   }
 
@@ -89,7 +89,7 @@
     inset: 0;
     z-index: 60;
     pointer-events: none;
-    opacity: 0.042;
+    opacity: 0.03;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   }
 }

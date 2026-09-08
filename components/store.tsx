@@ -10,12 +10,11 @@ import { offers as demo } from "@/lib/offers";
 import type { Offer } from "@/lib/offers";
 
 const DAY = 86_400_000;
-const EASE = "cubic-bezier(0.22,1,0.36,1)";
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
 const BLANK: Offer[] = [0, 1, 2, 3].map((index) => ({
-  colour: "#9b9a96",
+  colour: "#5f5c57",
   image: "",
   name: "",
   price: 0,
@@ -52,8 +51,7 @@ const track = (event: MouseEvent<HTMLButtonElement>) => {
 };
 
 export const Store = () => {
-  const { seats, state } = useAccount();
-  const [active, setActive] = useState(0);
+  const { seats, state, setOpen, refresh } = useAccount();
   const [viewing, setViewing] = useState<number | null>(null);
   const [clock, setClock] = useState({ burned: 0, countdown: "--:--:--" });
 
@@ -65,123 +63,108 @@ export const Store = () => {
   );
 
   useEffect(() => {
-    const tick = () => setClock(read(deadline));
+    let done = false;
+    const tick = () => {
+      const next = read(deadline);
+      setClock(next);
+      if (deadline && next.countdown === "00:00:00" && !done) {
+        done = true;
+        refresh();
+      }
+    };
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [deadline]);
+  }, [deadline, refresh]);
 
-  const waiting = seats.length > 0 && state.status !== "on";
+  const stale = state.status === "expired";
+  const waiting = seats.length > 0 && state.status === "loading";
   let offers = demo;
   if (live) {
     ({ offers } = live);
   } else if (waiting) {
     offers = BLANK;
   }
+
   const shown = viewing === null ? null : offers[viewing];
+
+  if (stale) {
+    return (
+      <div className="border-rule grid justify-items-center gap-5 border py-[clamp(40px,8vh,72px)]">
+        <p className="text-ink-2 m-0 text-[14px] font-light">
+          That Riot session has run out.
+        </p>
+        <button
+          className="cap border-rule-2 hover:bg-ink hover:text-paper cursor-pointer border px-[18px] py-[10px] transition-colors duration-300 hover:border-transparent"
+          onClick={() => setOpen(true)}
+          type="button"
+        >
+          Sign in again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="grid w-full gap-[clamp(16px,2.4vh,26px)]">
-      <div className="flex h-[clamp(200px,32vh,380px)] gap-[clamp(6px,0.9vw,12px)] sm:h-[clamp(230px,38vh,400px)]">
-        {offers.map((offer, index) => {
-          const open = index === active;
-          return (
-            <button
-              aria-pressed={open}
-              className={`rise relative flex-[1] cursor-pointer overflow-hidden border text-left transition-all duration-[600ms] ${
-                open
-                  ? "slab border-transparent shadow-[0_30px_60px_-28px_rgba(0,0,0,0.55)]"
-                  : "border-rule-2 hover:border-ink-3"
-              }`}
-              disabled={waiting}
-              key={offer.name || offer.weapon}
-              onClick={() => (open ? setViewing(index) : setActive(index))}
-              onMouseEnter={() => setActive(index)}
-              onMouseMove={track}
-              style={{
-                animationDelay: `${index * 110}ms`,
-                flexGrow: open ? 6 : 1,
-                transitionTimingFunction: EASE,
-              }}
-              type="button"
-            >
-              <span
-                className="absolute inset-0 block min-w-[168px] transition-opacity duration-300 sm:min-w-[248px]"
-                style={{
-                  opacity: open ? 1 : 0,
-                  transitionDelay: open ? "180ms" : "0ms",
-                }}
-              >
-                <span className="absolute top-[15%] bottom-[31%] left-1/2 w-[min(88%,512px)] -translate-x-1/2">
-                  {offer.image ? (
-                    <Image
-                      alt=""
-                      aria-hidden="true"
-                      className="object-contain drop-shadow-[0_18px_34px_rgba(0,0,0,0.6)]"
-                      fill
-                      priority={index === 0}
-                      sizes="512px"
-                      unoptimized
-                      src={offer.image}
-                    />
-                  ) : null}
-                </span>
+      <div className="grid grid-cols-1 gap-[clamp(10px,1.2vw,16px)] sm:grid-cols-2 lg:grid-cols-4">
+        {offers.map((offer, index) => (
+          <button
+            className="slab rise border-rule group hover:border-rule-2 relative flex h-[clamp(190px,26vh,250px)] cursor-pointer flex-col justify-between overflow-hidden border p-[clamp(14px,1.4vw,20px)] text-left transition-colors duration-300 disabled:cursor-default"
+            disabled={waiting}
+            key={offer.name || offer.weapon}
+            onClick={() => setViewing(index)}
+            onMouseMove={track}
+            style={{ animationDelay: `${index * 90}ms` }}
+            type="button"
+          >
+            <span className="relative flex items-baseline justify-between gap-3">
+              <span className="cap text-ink-3">slot {pad(index + 1)}</span>
+              <span className="cap text-ink-3">{offer.tier}</span>
+            </span>
 
-                <span className="absolute inset-0 flex flex-col justify-between p-[clamp(18px,2.2vw,30px)]">
-                  <span className="flex items-baseline justify-between gap-4">
-                    <span className="cap text-paper/40">
-                      slot {pad(index + 1)}
-                    </span>
-                    <span className="cap text-paper/40">{offer.tier}</span>
-                  </span>
-
-                  <span className="flex items-end justify-between gap-4">
-                    <span className="block">
-                      <span className="cap text-paper/40 mb-[12px] block">
-                        {offer.weapon}
-                      </span>
-                      <span className="text-paper block text-[clamp(24px,3.4vw,42px)] leading-[1.04] font-light tracking-[-0.024em]">
-                        {offer.name}
-                      </span>
-                      <span className="text-paper/60 mt-[14px] block font-mono text-[clamp(12px,1.2vw,15px)] font-light tabular-nums">
-                        {offer.price} VP
-                      </span>
-                    </span>
-                    <span className="cap text-paper/35 hidden whitespace-nowrap sm:block">
-                      Inspect
-                    </span>
-                  </span>
-                </span>
+            {offer.image ? (
+              <span className="pointer-events-none absolute inset-x-[6%] top-[26%] bottom-[34%]">
+                <Image
+                  alt=""
+                  aria-hidden="true"
+                  className="object-contain drop-shadow-[0_14px_26px_rgba(0,0,0,0.7)] transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                  fill
+                  priority={index < 2}
+                  sizes="(max-width: 640px) 90vw, 24vw"
+                  src={offer.image}
+                  unoptimized
+                />
               </span>
+            ) : null}
 
-              <span
-                className="absolute inset-0 flex items-center justify-center transition-opacity duration-300"
-                style={{
-                  opacity: open ? 0 : 1,
-                  transitionDelay: open ? "0ms" : "180ms",
-                }}
-              >
-                <span className="text-ink-3 absolute top-[clamp(14px,2vh,20px)] font-mono text-[11px] font-light tabular-nums">
-                  {pad(index + 1)}
-                </span>
-                <span className="cap text-ink-3 rotate-180 whitespace-nowrap [writing-mode:vertical-rl]">
-                  {offer.name}
-                </span>
+            <span className="relative block">
+              <span className="text-ink block truncate text-[clamp(14px,1.3vw,17px)] font-light tracking-[-0.012em]">
+                {offer.name}
               </span>
-            </button>
-          );
-        })}
+              <span
+                className="mt-[5px] block font-mono text-[12px] font-light tabular-nums"
+                style={{ color: offer.price > 0 ? offer.colour : undefined }}
+              >
+                {offer.price > 0 ? `${offer.price} VP` : ""}
+              </span>
+            </span>
+          </button>
+        ))}
       </div>
 
       <div className="flex items-center gap-[clamp(10px,1.6vw,22px)]">
         <span className="bg-accent blink size-[5px] shrink-0" />
+        {live ? null : (
+          <span className="cap text-ink-3 whitespace-nowrap">Sample</span>
+        )}
         <span className="cap text-ink-3 whitespace-nowrap">Resets in</span>
         <span className="text-accent font-mono text-[clamp(13px,1.35vw,16px)] font-light tracking-tight tabular-nums">
           {clock.countdown}
         </span>
         <span className="bg-rule relative h-px flex-1">
           <span
-            className="bg-ink absolute inset-y-0 left-0 transition-[width] duration-1000 ease-linear"
+            className="bg-ink-3 absolute inset-y-0 left-0 transition-[width] duration-1000 ease-linear"
             style={{ width: `${clock.burned * 100}%` }}
           />
         </span>
@@ -190,7 +173,9 @@ export const Store = () => {
         </span>
       </div>
 
-      {shown ? <Viewer offer={shown} onClose={() => setViewing(null)} /> : null}
+      {shown?.image ? (
+        <Viewer offer={shown} onClose={() => setViewing(null)} />
+      ) : null}
     </div>
   );
 };
