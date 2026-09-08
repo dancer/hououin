@@ -14,14 +14,6 @@
   ✓ hold several accounts and switch without signing in again
   ✓ sign in by scanning a code with riot mobile
 
-> run?
-
-  git clone https://github.com/dancer/hououin.git
-  cd hououin
-  bun install
-  echo "SESSION_SECRET=$(openssl rand -hex 32)" > .env.local
-  bun dev
-
 > sign in?
 
   open the site, press connect, scan the code with riot mobile.
@@ -63,11 +55,6 @@
 
   skin art comes from valorant-api.com at 512px, the largest riot
   publishes. nothing is ever drawn above its native size.
-
-> stack?
-
-  next 16, react 19, tailwind 4, ultracite with oxlint and oxfmt.
-  no database. no analytics. no asset host but riot's.
 
 > links?
 
