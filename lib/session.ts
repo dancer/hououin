@@ -7,8 +7,8 @@ import {
 
 const key = () => {
   const secret = process.env.SESSION_SECRET;
-  if (!secret) {
-    throw new Error("SESSION_SECRET is not set");
+  if (!secret || secret.length < 32) {
+    throw new Error("SESSION_SECRET must be set and at least 32 characters");
   }
   return scryptSync(secret, "hououin", 32);
 };

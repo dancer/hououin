@@ -12,6 +12,7 @@ const HEAD = 46;
 const SHOT = 150;
 const PAD = 48;
 const TOP = 150;
+const SHELL = Array.from({ length: 15 }, (_, index) => `shell-${index}`);
 
 type State =
   | { status: "loading" }
@@ -139,7 +140,22 @@ export const Vault = () => {
   }, [state]);
 
   if (state.status === "loading") {
-    return <p className="cap text-ink-3 py-20 text-center">Loading</p>;
+    return (
+      <div className="grid gap-[clamp(20px,3vh,32px)]">
+        <div className="border-rule flex items-center justify-between border-b pb-[14px]">
+          <span className="cap text-ink-3">Reading your locker</span>
+        </div>
+        <div className="grid grid-cols-2 gap-x-[clamp(14px,2vw,28px)] gap-y-[clamp(20px,2.6vw,34px)] sm:grid-cols-3 lg:grid-cols-5">
+          {SHELL.map((key) => (
+            <div key={key}>
+              <span className="bg-rule block h-[12px] w-[70%]" />
+              <span className="bg-rule/60 mt-[8px] block h-[9px] w-[34%]" />
+              <span className="bg-rule/35 mt-[12px] block h-[74px] w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (state.status === "off") {

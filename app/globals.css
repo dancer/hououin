@@ -65,6 +65,12 @@
 @layer base {
   html {
     color-scheme: light;
+    scrollbar-width: none;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none;
   }
 
   a {

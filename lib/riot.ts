@@ -20,6 +20,16 @@ const TIERS_VP: Record<string, number> = {
   Ultra: 2475,
 };
 const HOUR = 3_600_000;
+const SHARDS = new Set([
+  "ap",
+  "br",
+  "esports",
+  "eu",
+  "kr",
+  "latam",
+  "na",
+  "pbe",
+]);
 
 export const pasted = (header: string) => parse(header);
 
@@ -149,7 +159,11 @@ export const shard = async (tokens: Tokens) => {
     method: "PUT",
   });
   const body = await res.json();
-  return body.affinities.live as string;
+  const live = String(body?.affinities?.live ?? "");
+  if (!SHARDS.has(live)) {
+    throw new Error("unknown shard");
+  }
+  return live;
 };
 
 const levels = async () => {

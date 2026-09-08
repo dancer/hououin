@@ -2,6 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 
+import { AccountProvider } from "@/components/account";
+import { Connect } from "@/components/connect";
+import { chosen, roster } from "@/lib/accounts";
+
 import "./globals.css";
 
 const inter = Inter({
@@ -27,11 +31,21 @@ export const viewport: Viewport = {
   themeColor: "#eeedeb",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const [all, active] = await Promise.all([roster(), chosen()]);
+  const seats = all.map((entry) => ({ handle: entry.handle, id: entry.id }));
+
   return (
     <html className={`${inter.variable} ${jetbrains.variable}`} lang="en">
       <body className="bg-paper text-ink font-sans antialiased">
-        {children}
+        <AccountProvider active={active?.id ?? ""} seats={seats}>
+          {children}
+          <Connect />
+        </AccountProvider>
       </body>
     </html>
   );

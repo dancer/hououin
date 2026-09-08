@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { ReactNode } from "react";
@@ -31,6 +32,7 @@ export interface Seat {
 interface Value {
   state: State;
   seats: Seat[];
+  active: string;
   open: boolean;
   setOpen: (next: boolean) => void;
   connect: (cookie: string) => Promise<string | null>;
@@ -41,9 +43,6 @@ interface Value {
 
 const Context = createContext<Value | null>(null);
 
-const activeHandle = (state: State) =>
-  state.status === "on" ? state.handle : "";
-
 export const useAccount = () => {
   const value = useContext(Context);
   if (!value) {
@@ -52,9 +51,18 @@ export const useAccount = () => {
   return value;
 };
 
-export const AccountProvider = ({ children }: { children: ReactNode }) => {
+export const AccountProvider = ({
+  active: seeded,
+  children,
+  seats: initial,
+}: {
+  active: string;
+  children: ReactNode;
+  seats: Seat[];
+}) => {
   const [state, setState] = useState<State>({ status: "loading" });
-  const [seats, setSeats] = useState<Seat[]>([]);
+  const [seats, setSeats] = useState<Seat[]>(initial);
+  const [active, setActive] = useState(seeded);
   const [open, setOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -62,12 +70,11 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
       fetch("/api/store"),
       fetch("/api/accounts"),
     ]);
-    let list: Seat[] = [];
     if (seatRes.ok) {
       const body = await seatRes.json();
-      list = body.accounts;
+      setSeats(body.accounts);
+      setActive(body.active ?? "");
     }
-    setSeats(list);
     if (!feedRes.ok) {
       setState({ status: "off" });
       return;
@@ -100,17 +107,20 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const disconnect = useCallback(async () => {
-    const current = seats.find((seat) => seat.handle === activeHandle(state));
-    const id = current?.id ?? seats[0]?.id;
-    if (id) {
-      await fetch(`/api/accounts?id=${id}`, { method: "DELETE" });
+    const id = active || seats[0]?.id;
+    if (!id) {
+      return;
     }
+    await fetch(`/api/accounts?id=${id}`, { method: "DELETE" });
+    setSeats((current) => current.filter((seat) => seat.id !== id));
+    setActive("");
     setState({ status: "loading" });
     await load();
-  }, [load, seats, state]);
+  }, [active, load, seats]);
 
   const switchTo = useCallback(
     async (id: string) => {
+      setActive(id);
       await fetch("/api/accounts", {
         body: JSON.stringify({ id }),
         headers: { "Content-Type": "application/json" },
@@ -124,6 +134,7 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
 
   const value = useMemo(
     () => ({
+      active,
       connect,
       disconnect,
       open,
@@ -133,17 +144,42 @@ export const AccountProvider = ({ children }: { children: ReactNode }) => {
       state,
       switchTo,
     }),
-    [connect, disconnect, load, open, seats, state, switchTo]
+    [active, connect, disconnect, load, open, seats, state, switchTo]
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;
 };
 
 export const Account = () => {
-  const { state, seats, setOpen, disconnect, switchTo } = useAccount();
+  const { active, seats, setOpen, disconnect, switchTo } = useAccount();
   const [menu, setMenu] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
 
-  if (state.status !== "on") {
+  useEffect(() => {
+    if (!menu) {
+      return;
+    }
+    const away = (event: MouseEvent) => {
+      if (!box.current?.contains(event.target as Node)) {
+        setMenu(false);
+      }
+    };
+    const key = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenu(false);
+      }
+    };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", key);
+    };
+  }, [menu]);
+
+  const seat = seats.find((entry) => entry.id === active) ?? seats[0];
+
+  if (!seat) {
     return (
       <button
         className="cap border-rule-2 hover:bg-ink hover:text-paper cursor-pointer border px-[18px] py-[10px] transition-colors duration-300 hover:border-transparent"
@@ -156,33 +192,36 @@ export const Account = () => {
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={box}>
       <button
-        className="cap border-rule-2 hover:bg-ink hover:text-paper max-w-[18ch] cursor-pointer truncate border px-[18px] py-[10px] transition-colors duration-300 hover:border-transparent"
+        aria-expanded={menu}
+        aria-haspopup="menu"
+        className="cap border-rule-2 hover:bg-ink hover:text-paper max-w-[210px] cursor-pointer truncate border px-[18px] py-[10px] transition-colors duration-300 hover:border-transparent"
         onClick={() => setMenu(!menu)}
         type="button"
       >
-        {state.handle || "Connected"}
+        {seat.handle}
       </button>
 
       {menu ? (
-        <div className="border-rule-2 bg-paper absolute top-[calc(100%+8px)] right-0 z-20 grid w-[248px] border shadow-[0_24px_50px_-24px_rgba(0,0,0,0.35)]">
-          {seats.map((seat) => (
+        <div
+          className="border-rule-2 bg-paper absolute top-[calc(100%+8px)] right-0 z-20 grid w-[248px] border shadow-[0_24px_50px_-24px_rgba(0,0,0,0.35)]"
+          role="menu"
+        >
+          {seats.map((entry) => (
             <button
               className={`cap flex cursor-pointer items-center justify-between gap-3 px-[14px] py-[11px] text-left transition-colors duration-200 ${
-                seat.handle === state.handle
-                  ? "text-ink"
-                  : "text-ink-3 hover:text-ink"
+                entry.id === seat.id ? "text-ink" : "text-ink-3 hover:text-ink"
               }`}
-              key={seat.id}
+              key={entry.id}
               onClick={() => {
                 setMenu(false);
-                switchTo(seat.id);
+                switchTo(entry.id);
               }}
               type="button"
             >
-              <span className="truncate">{seat.handle}</span>
-              {seat.handle === state.handle ? (
+              <span className="truncate">{entry.handle}</span>
+              {entry.id === seat.id ? (
                 <span className="bg-accent size-[5px] shrink-0" />
               ) : null}
             </button>

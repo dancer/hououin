@@ -7,11 +7,22 @@ import type { MouseEvent } from "react";
 import { useAccount } from "@/components/account";
 import { Viewer } from "@/components/viewer";
 import { offers as demo } from "@/lib/offers";
+import type { Offer } from "@/lib/offers";
 
 const DAY = 86_400_000;
 const EASE = "cubic-bezier(0.22,1,0.36,1)";
 
 const pad = (value: number) => String(value).padStart(2, "0");
+
+const BLANK: Offer[] = [0, 1, 2, 3].map((index) => ({
+  colour: "#9b9a96",
+  image: "",
+  name: "",
+  price: 0,
+  tier: "",
+  variants: [],
+  weapon: `slot-${index}`,
+}));
 
 const read = (deadline: number | null) => {
   const now = Date.now();
@@ -41,7 +52,7 @@ const track = (event: MouseEvent<HTMLButtonElement>) => {
 };
 
 export const Store = () => {
-  const { state } = useAccount();
+  const { seats, state } = useAccount();
   const [active, setActive] = useState(0);
   const [viewing, setViewing] = useState<number | null>(null);
   const [clock, setClock] = useState({ burned: 0, countdown: "--:--:--" });
@@ -60,7 +71,13 @@ export const Store = () => {
     return () => clearInterval(timer);
   }, [deadline]);
 
-  const offers = live ? live.offers : demo;
+  const waiting = seats.length > 0 && state.status !== "on";
+  let offers = demo;
+  if (live) {
+    ({ offers } = live);
+  } else if (waiting) {
+    offers = BLANK;
+  }
   const shown = viewing === null ? null : offers[viewing];
 
   return (
@@ -76,7 +93,8 @@ export const Store = () => {
                   ? "slab border-transparent shadow-[0_30px_60px_-28px_rgba(0,0,0,0.55)]"
                   : "border-rule-2 hover:border-ink-3"
               }`}
-              key={offer.name}
+              disabled={waiting}
+              key={offer.name || offer.weapon}
               onClick={() => (open ? setViewing(index) : setActive(index))}
               onMouseEnter={() => setActive(index)}
               onMouseMove={track}
@@ -95,16 +113,18 @@ export const Store = () => {
                 }}
               >
                 <span className="absolute top-[15%] bottom-[31%] left-1/2 w-[min(88%,512px)] -translate-x-1/2">
-                  <Image
-                    alt=""
-                    aria-hidden="true"
-                    className="object-contain drop-shadow-[0_18px_34px_rgba(0,0,0,0.6)]"
-                    fill
-                    priority={index === 0}
-                    sizes="512px"
-                    unoptimized
-                    src={offer.image}
-                  />
+                  {offer.image ? (
+                    <Image
+                      alt=""
+                      aria-hidden="true"
+                      className="object-contain drop-shadow-[0_18px_34px_rgba(0,0,0,0.6)]"
+                      fill
+                      priority={index === 0}
+                      sizes="512px"
+                      unoptimized
+                      src={offer.image}
+                    />
+                  ) : null}
                 </span>
 
                 <span className="absolute inset-0 flex flex-col justify-between p-[clamp(18px,2.2vw,30px)]">

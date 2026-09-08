@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { activate, forget, roster } from "@/lib/accounts";
+import { activate, chosen, forget, roster } from "@/lib/accounts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const GET = async () => {
-  const all = await roster();
+  const [all, active] = await Promise.all([roster(), chosen()]);
   return NextResponse.json({
     accounts: all.map((entry) => ({ handle: entry.handle, id: entry.id })),
+    active: active?.id ?? "",
   });
 };
 
