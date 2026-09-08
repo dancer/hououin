@@ -4,28 +4,25 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { MouseEvent } from "react";
 
+import { useAccount } from "@/components/account";
 import { Viewer } from "@/components/viewer";
-import { offers, render } from "@/lib/offers";
+import { offers as demo } from "@/lib/offers";
 
 const DAY = 86_400_000;
 const EASE = "cubic-bezier(0.22,1,0.36,1)";
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
-const read = () => {
-  const now = new Date();
-  const start = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate()
-  );
-  const gone = now.getTime() - start;
-  const left = DAY - gone;
+const read = (deadline: number | null) => {
+  const now = Date.now();
+  const left = deadline
+    ? Math.max(0, deadline - now)
+    : DAY - (now - new Date().setUTCHours(0, 0, 0, 0));
   const hours = Math.floor(left / 3_600_000);
   const minutes = Math.floor((left % 3_600_000) / 60_000);
   const seconds = Math.floor((left % 60_000) / 1000);
   return {
-    burned: gone / DAY,
+    burned: 1 - left / DAY,
     countdown: [hours, minutes, seconds].map(pad).join(":"),
   };
 };
@@ -44,17 +41,22 @@ const track = (event: MouseEvent<HTMLButtonElement>) => {
 };
 
 export const Store = () => {
+  const { state } = useAccount();
   const [active, setActive] = useState(0);
   const [viewing, setViewing] = useState<number | null>(null);
   const [clock, setClock] = useState({ burned: 0, countdown: "--:--:--" });
 
+  const live = state.status === "on" ? state : null;
+  const deadline = live ? Date.now() + live.seconds * 1000 : null;
+
   useEffect(() => {
-    const tick = () => setClock(read());
+    const tick = () => setClock(read(deadline));
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [deadline]);
 
+  const offers = live ? live.offers : demo;
   const shown = viewing === null ? null : offers[viewing];
 
   return (
@@ -97,7 +99,7 @@ export const Store = () => {
                     priority={index === 0}
                     sizes="512px"
                     unoptimized
-                    src={render(offer.slug, offer.variants[0])}
+                    src={offer.image}
                   />
                 </span>
 

@@ -1,58 +1,53 @@
+export interface Variant {
+  image: string;
+  name: string;
+}
+
 export interface Offer {
-  height: number;
+  image: string;
   name: string;
   price: number;
-  slug: string;
   tier: string;
-  variants: string[];
+  variants: Variant[];
   weapon: string;
-  width: number;
 }
+
+const skin = (slug: string, names: string[]): Variant[] =>
+  names.map((name) => ({ image: `/skins/${slug}/${name}.png`, name }));
 
 export const offers: Offer[] = [
   {
-    height: 148,
+    image: "/skins/vandal/base.png",
     name: "Prime Vandal",
     price: 1775,
-    slug: "vandal",
     tier: "Premium",
-    variants: ["base", "orange", "blue", "yellow"],
+    variants: skin("vandal", ["base", "orange", "blue", "yellow"]),
     weapon: "Vandal",
-    width: 512,
   },
   {
-    height: 100,
+    image: "/skins/operator/base.png",
     name: "Elderflame Operator",
     price: 2475,
-    slug: "operator",
     tier: "Ultra",
-    variants: ["base", "red", "blue", "dark"],
+    variants: skin("operator", ["base", "red", "blue", "dark"]),
     weapon: "Operator",
-    width: 512,
   },
   {
-    height: 240,
+    image: "/skins/sheriff/base.png",
     name: "Ion Sheriff",
     price: 1775,
-    slug: "sheriff",
     tier: "Premium",
-    variants: ["base"],
+    variants: skin("sheriff", ["base"]),
     weapon: "Sheriff",
-    width: 512,
   },
   {
-    height: 360,
+    image: "/skins/frenzy/base.png",
     name: "Sensation Frenzy",
     price: 875,
-    slug: "frenzy",
     tier: "Select",
-    variants: ["base"],
+    variants: skin("frenzy", ["base"]),
     weapon: "Frenzy",
-    width: 512,
   },
 ];
-
-export const render = (slug: string, variant: string) =>
-  `/skins/${slug}/${variant}.png`;
 
 export const total = offers.reduce((sum, offer) => sum + offer.price, 0);

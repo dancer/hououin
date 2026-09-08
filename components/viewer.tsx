@@ -4,7 +4,6 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { PointerEvent } from "react";
 
-import { render } from "@/lib/offers";
 import type { Offer } from "@/lib/offers";
 
 const TILT = 6;
@@ -17,8 +16,9 @@ export const Viewer = ({
   offer: Offer;
   onClose: () => void;
 }) => {
-  const [variant, setVariant] = useState(offer.variants[0]);
+  const [pick, setPick] = useState(0);
   const [spot, setSpot] = useState(REST);
+  const [ratio, setRatio] = useState(512 / 200);
 
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -38,8 +38,7 @@ export const Viewer = ({
     });
   };
 
-  const source = render(offer.slug, variant);
-  const ratio = `${offer.width} / ${offer.height}`;
+  const source = offer.variants[pick]?.image ?? offer.image;
   const lean = {
     x: ((REST.y - spot.y) / 50) * TILT,
     y: ((spot.x - REST.x) / 50) * TILT,
@@ -100,6 +99,12 @@ export const Viewer = ({
               alt={offer.name}
               className="object-contain drop-shadow-[0_26px_38px_rgba(0,0,0,0.85)]"
               fill
+              onLoad={(event) => {
+                const node = event.currentTarget;
+                if (node.naturalHeight > 0) {
+                  setRatio(node.naturalWidth / node.naturalHeight);
+                }
+              }}
               priority
               sizes="512px"
               src={source}
@@ -146,19 +151,19 @@ export const Viewer = ({
         <div className="border-paper/10 relative mt-[clamp(16px,2.6vw,26px)] flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t pt-[clamp(14px,2.2vw,20px)]">
           {offer.variants.length > 1 ? (
             <span className="flex flex-wrap items-center gap-x-5 gap-y-2">
-              {offer.variants.map((name) => (
+              {offer.variants.map((variant, index) => (
                 <button
-                  aria-pressed={name === variant}
+                  aria-pressed={index === pick}
                   className={`cap cursor-pointer transition-colors duration-200 ${
-                    name === variant
+                    index === pick
                       ? "text-paper"
                       : "text-paper/30 hover:text-paper/60"
                   }`}
-                  key={name}
-                  onClick={() => setVariant(name)}
+                  key={variant.image}
+                  onClick={() => setPick(index)}
                   type="button"
                 >
-                  {name}
+                  {variant.name}
                 </button>
               ))}
             </span>

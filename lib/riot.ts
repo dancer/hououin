@@ -1,3 +1,5 @@
+import type { Offer, Variant } from "@/lib/offers";
+
 const AUTHORIZE =
   "https://auth.riotgames.com/authorize?redirect_uri=https%3A%2F%2Fplayvalorant.com%2Fopt_in&client_id=play-valorant-web-prod&response_type=token%20id_token&scope=account%20openid&nonce=1";
 const ENTITLEMENTS = "https://entitlements.auth.riotgames.com/api/token/v1";
@@ -23,19 +25,10 @@ export interface Tokens {
   id: string;
 }
 
-export interface Live {
-  name: string;
-  weapon: string;
-  tier: string;
-  price: number;
-  image: string;
-  variants: string[];
-}
-
 export interface Shop {
   handle: string;
   seconds: number;
-  offers: Live[];
+  offers: Offer[];
   ssid: string;
 }
 
@@ -44,11 +37,17 @@ interface Entry {
   weapon: string;
   tier: string;
   image: string;
-  variants: string[];
+  variants: Variant[];
 }
 
 let version: { build: string; client: string; at: number } | null = null;
 let catalogue: { map: Map<string, Entry>; at: number } | null = null;
+
+const COLOUR = /Variant \d+ (?<name>\w+)/u;
+
+const colour = (label: string) =>
+  COLOUR.exec(label.replaceAll("\r\n", " "))?.groups?.name?.toLowerCase() ??
+  "base";
 
 const fresh = (at: number) => Date.now() - at < HOUR;
 
@@ -179,7 +178,10 @@ const levels = async () => {
         tier: tierName.get(skin.contentTierUuid) ?? "Standard",
         variants: (skin.chromas ?? [])
           .filter((chroma: { fullRender: string | null }) => chroma.fullRender)
-          .map((chroma: { fullRender: string }) => chroma.fullRender),
+          .map((chroma: { fullRender: string; displayName: string }) => ({
+            image: chroma.fullRender,
+            name: colour(chroma.displayName),
+          })),
         weapon: weapon.displayName,
       };
       for (const level of skin.levels ?? []) {
@@ -227,7 +229,7 @@ export const shop = async (ssid: string): Promise<Shop | null> => {
   const body = await res.json();
   const panel = body.SkinsPanelLayout;
 
-  const offers: Live[] = panel.SingleItemStoreOffers.map(
+  const offers: Offer[] = panel.SingleItemStoreOffers.map(
     (offer: {
       Cost: Record<string, number>;
       Rewards: { ItemID: string }[];
