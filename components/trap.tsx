@@ -16,15 +16,16 @@ export const Trap = ({
   onClose: () => void;
 }) => {
   const box = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    const first = box.current?.querySelector<HTMLElement>(FOCUSABLE);
-    first?.focus();
+    box.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
 
     const key = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose();
+        close.current();
         return;
       }
       if (event.key !== "Tab" || !box.current) {
@@ -46,7 +47,7 @@ export const Trap = ({
       document.removeEventListener("keydown", key);
       previous?.focus();
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div className={className} ref={box}>

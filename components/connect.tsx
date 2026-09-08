@@ -148,7 +148,10 @@ export const Connect = () => {
 
         {mode === "qr" ? (
           <div className="mt-[20px] grid justify-items-center gap-[16px]">
-            <div className="relative size-[248px] bg-[#eae7e2]">
+            <div
+              className="border-rule relative size-[248px] border transition-colors duration-500"
+              style={{ background: code ? "#eae7e2" : "transparent" }}
+            >
               <div
                 className="size-full transition-opacity duration-500"
                 style={{ opacity: code ? 1 : 0 }}
@@ -157,13 +160,13 @@ export const Connect = () => {
               </div>
               {code ? null : (
                 <div className="absolute inset-[14%] grid animate-pulse grid-cols-3 grid-rows-3 gap-[12%]">
-                  <span className="border-[3px] border-[#0d0d0c]/20" />
+                  <span className="border-ink-3/25 border-[3px]" />
                   <span />
-                  <span className="border-[3px] border-[#0d0d0c]/20" />
+                  <span className="border-ink-3/25 border-[3px]" />
                   <span />
                   <span />
                   <span />
-                  <span className="border-[3px] border-[#0d0d0c]/20" />
+                  <span className="border-ink-3/25 border-[3px]" />
                 </div>
               )}
             </div>

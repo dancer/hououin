@@ -59,17 +59,16 @@ export const Store = () => {
   const seconds = live?.seconds ?? null;
   const deadline = useMemo(
     () => (seconds === null ? null : Date.now() + seconds * 1000),
-    [seconds]
+    [seconds, live]
   );
 
   useEffect(() => {
-    let done = false;
+    let asked = false;
     const tick = () => {
-      const next = read(deadline);
-      setClock(next);
-      if (deadline && next.countdown === "00:00:00" && !done) {
-        done = true;
-        refresh();
+      setClock(read(deadline));
+      if (deadline && Date.now() >= deadline && !asked) {
+        asked = true;
+        setTimeout(refresh, 1500);
       }
     };
     tick();
@@ -78,6 +77,7 @@ export const Store = () => {
   }, [deadline, refresh]);
 
   const stale = state.status === "expired";
+  const broke = state.status === "failed";
   const waiting = seats.length > 0 && state.status === "loading";
   let offers = demo;
   if (live) {
@@ -87,6 +87,23 @@ export const Store = () => {
   }
 
   const shown = viewing === null ? null : offers[viewing];
+
+  if (broke) {
+    return (
+      <div className="border-rule grid justify-items-center gap-5 border py-[clamp(40px,8vh,72px)]">
+        <p className="text-ink-2 m-0 text-[14px] font-light">
+          Could not reach Riot just now.
+        </p>
+        <button
+          className="cap border-rule-2 hover:bg-ink hover:text-paper cursor-pointer border px-[18px] py-[10px] transition-colors duration-300 hover:border-transparent"
+          onClick={() => refresh()}
+          type="button"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   if (stale) {
     return (

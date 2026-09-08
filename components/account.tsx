@@ -23,6 +23,7 @@ type State =
   | { status: "loading" }
   | { status: "off" }
   | { status: "expired" }
+  | { status: "failed" }
   | ({ status: "on" } & Feed);
 
 export interface Seat {
@@ -66,6 +67,7 @@ export const AccountProvider = ({
   const [active, setActive] = useState(seeded);
   const [open, setOpen] = useState(false);
   const turn = useRef(0);
+  const pick = useRef(0);
 
   const load = useCallback(async () => {
     turn.current += 1;
@@ -95,9 +97,13 @@ export const AccountProvider = ({
         settle({ status: "on", ...feed });
         return;
       }
-      settle({ status: known > 0 ? "expired" : "off" });
+      if (known === 0) {
+        settle({ status: "off" });
+        return;
+      }
+      settle({ status: feedRes.status === 401 ? "expired" : "failed" });
     } catch {
-      settle({ status: "expired" });
+      settle({ status: "failed" });
     }
   }, []);
 
@@ -138,14 +144,32 @@ export const AccountProvider = ({
 
   const switchTo = useCallback(
     async (id: string) => {
+      pick.current += 1;
+      const ticket = pick.current;
       setActive(id);
-      await fetch("/api/accounts", {
-        body: JSON.stringify({ id }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      });
       setState({ status: "loading" });
-      await load();
+      try {
+        const res = await fetch("/api/accounts", {
+          body: JSON.stringify({ id }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        if (ticket !== pick.current) {
+          return;
+        }
+        if (!res.ok) {
+          setState({ status: "failed" });
+          return;
+        }
+      } catch {
+        if (ticket === pick.current) {
+          setState({ status: "failed" });
+        }
+        return;
+      }
+      if (ticket === pick.current) {
+        await load();
+      }
     },
     [load]
   );
