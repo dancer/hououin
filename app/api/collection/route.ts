@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 
-import { attach, chosen } from "@/lib/accounts";
+import { attach, load } from "@/lib/accounts";
 import { collection } from "@/lib/riot";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const GET = async () => {
-  const account = await chosen();
+  const { active: account } = await load();
   if (!account) {
     return NextResponse.json({ error: "not connected" }, { status: 401 });
   }
@@ -21,6 +21,6 @@ export const GET = async () => {
     handle: owned.handle,
     skins: owned.skins,
   });
-  attach(response, { ...account, handle: owned.handle, jar: owned.jar });
+  attach(response, { ...account, handle: owned.handle, jar: owned.jar }, false);
   return response;
 };

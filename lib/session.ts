@@ -5,12 +5,18 @@ import {
   scryptSync,
 } from "node:crypto";
 
+let derived: Buffer | null = null;
+
 const key = () => {
+  if (derived) {
+    return derived;
+  }
   const secret = process.env.SESSION_SECRET;
   if (!secret || secret.length < 32) {
     throw new Error("SESSION_SECRET must be set and at least 32 characters");
   }
-  return scryptSync(secret, "hououin", 32);
+  derived = scryptSync(secret, "hououin", 32);
+  return derived;
 };
 
 export const seal = (value: string) => {

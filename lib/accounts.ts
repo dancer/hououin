@@ -27,7 +27,12 @@ export interface Account {
 export const slot = (puuid: string) =>
   createHash("sha256").update(puuid).digest("hex").slice(0, 12);
 
-export const roster = async (): Promise<Account[]> => {
+export interface Ledger {
+  accounts: Account[];
+  active: Account | null;
+}
+
+export const load = async (): Promise<Ledger> => {
   const store = await cookies();
   const found: Account[] = [];
   for (const item of store.getAll()) {
@@ -49,17 +54,11 @@ export const roster = async (): Promise<Account[]> => {
       continue;
     }
   }
-  return found.toSorted((a, b) => a.handle.localeCompare(b.handle));
-};
-
-export const chosen = async () => {
-  const all = await roster();
-  if (all.length === 0) {
-    return null;
-  }
-  const store = await cookies();
-  const id = store.get(ACTIVE)?.value;
-  return all.find((entry) => entry.id === id) ?? all[0];
+  const accounts = found.toSorted((a, b) => a.handle.localeCompare(b.handle));
+  const wanted = store.get(ACTIVE)?.value;
+  const active =
+    accounts.find((entry) => entry.id === wanted) ?? accounts[0] ?? null;
+  return { accounts, active };
 };
 
 export const attach = (
