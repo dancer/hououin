@@ -66,6 +66,14 @@
   publish, there is no larger variant, and nothing here is ever
   drawn above it.
 
+> license?
+
+  the code is mit. take it, change it, ship it.
+
+  that covers the code and nothing else. valorant, the skin names,
+  and every render under public/skins belong to riot. this is a fan
+  project, not affiliated with or endorsed by riot games.
+
 > links?
 
   https://hououin.com
